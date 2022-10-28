@@ -7,7 +7,6 @@ module.exports = {
         'v2/ReverseRegistrarUtil.sol',
         'v2/MiddleWareV2.sol',
         'v2/DoubleSVGV2.sol',
-        'v2/OwnableContract.sol',
         'v2/DoNFTV2.sol',
     ],
     providerOptions: {
