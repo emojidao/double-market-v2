@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers } from "hardhat";
 
-describe("Test Market", function () {
+describe("Test Market 4907", function () {
 
     const ETH_Address = "0x0000000000000000000000000000000000000000";
     const address0 = '0x0000000000000000000000000000000000000000';
@@ -10,7 +10,6 @@ describe("Test Market", function () {
     let market;
     let testERC4907;
     let doNFT4907;
-    let doNFTWrap;
     let maxEndTime;
     let first4907Id = 1;
     let second4907Id = 2;
@@ -28,7 +27,6 @@ describe("Test Market", function () {
         const Market = await ethers.getContractFactory("MarketV2");
         market = await Market.deploy();
         await market.initialize(owner.address, admin.address, beneficiary.address);
-        await market.setMaxIndate(86400 * 365)
 
         const TestERC4907Upgradeable = await ethers.getContractFactory("TestERC4907Upgradeable");
         testERC4907 = await TestERC4907Upgradeable.deploy();
@@ -45,15 +43,6 @@ describe("Test Market", function () {
         await doNFT4907.deployed();
         await doNFT4907.initialize("do4907", "do4907", market.address, owner.address, admin.address);
 
-        const DoNFTWrapModel = await ethers.getContractFactory('DoNFTWrapModel', {
-            libraries: {
-                "DoubleSVGV2": double_svg_v2.address
-            }
-        });
-        doNFTWrap = await DoNFTWrapModel.deploy();
-        await doNFTWrap.deployed();
-        await doNFTWrap.initialize("doWrap", "doWrap", market.address, owner.address, admin.address);
-
         await testERC4907.connect(lender).setApprovalForAll(doNFT4907.address, true);
         await testERC4907.connect(lender).mint(lender.address, first4907Id);
         await testERC4907.connect(lender).mint(lender.address, second4907Id);
@@ -66,7 +55,33 @@ describe("Test Market", function () {
         it("mint and create lend order with ETH", async function () {
             await market.connect(lender).mintAndCreateLendOrder(testERC4907.address, pricePerDay, doNFT4907.address, maxEndTime, first4907Id, ETH_Address, 86400, 0, address0);
             expect(await market.isLendOrderValid(doNFT4907.address, 1)).equal(true);
+            let lendOrder = await market.getLendOrder(doNFT4907.address, 1)
+            expect(lendOrder.lender).equal(lender.address);
+            expect(lendOrder.maxEndTime).equal(maxEndTime);
+            expect(lendOrder.minDuration).equal(86400);
+            expect(lendOrder.orderType).equal(0);
+            expect(lendOrder.paymentToken).equal(ETH_Address);
+            expect(lendOrder.privateOrderRenter).equal(address0);
+            expect(lendOrder.pricePerDay).equal(pricePerDay);
         });
+
+        it("mint and create lend order with ETH limit indate", async function () {
+            await market.setMaxIndate(86400 * 6)
+            await market.connect(lender).mintAndCreateLendOrder(testERC4907.address, pricePerDay, doNFT4907.address, maxEndTime, first4907Id, ETH_Address, 86400, 0, address0);
+            expect(await market.isLendOrderValid(doNFT4907.address, 1)).equal(true);
+            let lendOrder = await market.getLendOrder(doNFT4907.address, 1)
+            expect(lendOrder.lender).equal(lender.address);
+            expect(lendOrder.maxEndTime).lt(maxEndTime);
+            expect(lendOrder.minDuration).equal(86400);
+            expect(lendOrder.orderType).equal(0);
+            expect(lendOrder.paymentToken).equal(ETH_Address);
+            expect(lendOrder.privateOrderRenter).equal(address0);
+            expect(lendOrder.pricePerDay).equal(pricePerDay);
+
+        });
+
+
+
         it("mint and create lend order with ETH fail", async function () {
             await expect(market.connect(renter).mintAndCreateLendOrder(testERC4907.address, pricePerDay, doNFT4907.address, maxEndTime, first4907Id, ETH_Address, 86400, 0, address0)).to.be.revertedWith("only owner");
         });
@@ -97,6 +112,10 @@ describe("Test Market", function () {
             await market.connect(renter).fulfillOrderNow(doNFT4907.address, 86400, 1, renter.address, ETH_Address, pricePerDay, { value: pricePerDay });
             expect(await doNFT4907.ownerOf(2)).equal(renter.address, "ownerOf 2");
             expect(await testERC4907.userOf(first4907Id)).equal(renter.address, "userOf");
+
+            await market.connect(renter).createLendOrder(doNFT4907.address, maxEndTime, 0, 2, ETH_Address, pricePerDay, address0, 86400);
+            await market.connect(renter).fulfillOrderNow(doNFT4907.address, 86400*2, 2, renter.address, ETH_Address, pricePerDay, { value: ethers.utils.parseEther('2') });
+
         });
         it("fulfillOrderNow with ETH fail", async function () {
             await market.connect(lender).mintAndCreateLendOrder(testERC4907.address, pricePerDay, doNFT4907.address, maxEndTime, first4907Id, ETH_Address, 86400, 0, address0);
