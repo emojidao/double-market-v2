@@ -88,12 +88,12 @@ contract MiddleWareV2 {
                 doNftInfo.orderMinDuration = uint32(order.minDuration);
                 doNftInfo.orderMaxEndTime = uint32(order.maxEndTime);
                 doNftInfo.orderPricePerDay = uint96(order.pricePerDay);
-                doNftInfo.orderPaymentToken = order.paymentToken;
+                doNftInfo.orderPaymentToken = order.paymentToken;                
+            }
 
-                if(doNft.getModelType() == IDoNFTV2.DoNFTModelType.WrapModel) {
+            if(doNft.getModelType() == IDoNFTV2.DoNFTModelType.WrapModel) {
                     address wrapNftAddress = doNftInfo.originalNftAddress;
                     doNftInfo.originalNftAddress =  IWrapNFT(wrapNftAddress).originalAddress();
-                }
             }
         }
     }
